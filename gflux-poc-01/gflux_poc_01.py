@@ -35,27 +35,13 @@ def main() -> int:
         logging.error("Failed to create appsink/appsrc")
         return 1
 
-    # We set appsrc caps from the first sample received on appsink
-    state = {"appsrc_caps_set": False}
-
     def on_new_sample(sink):
         sample = sink.emit("pull-sample")
         if sample is None:
             return Gst.FlowReturn.ERROR
-
-        if not state["appsrc_caps_set"]:
-            caps = sample.get_caps()
-            logging.info(f"Received first sample with caps: {caps.to_string()}")
-            if caps is not None:
-                appsrc.set_property("caps", caps)
-                state["appsrc_caps_set"] = True
-
-        buffer = sample.get_buffer()
-        if buffer is None:
-            return Gst.FlowReturn.ERROR
         
         # Forward the buffer to appsrc
-        return appsrc.emit("push-buffer", buffer)
+        return appsrc.emit("push-sample", sample)
 
     appsink.connect("new-sample", on_new_sample)
 
