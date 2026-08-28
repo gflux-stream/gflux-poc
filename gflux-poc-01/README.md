@@ -6,8 +6,8 @@ Programmatically transfer buffers from appsink to appsrc.
 ### Approach
 1. Create gstreamer pipelines as follows:
     ```
-    videotestsrc  -->  appsink
-    appsrc        -->  autovideosink
+    videotestsrc  !  appsink
+    appsrc        !  autovideosink
     ```
 2. In the appsink's "new-sample" callback, push received buffers into appsrc.
 3. Set appsrc caps based on the first buffer received from appsink.

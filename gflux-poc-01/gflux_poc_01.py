@@ -7,7 +7,7 @@ gi.require_version("Gst", "1.0")
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gst, Gtk
 
-logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="[%(asctime)s ][%(levelname)s] %(message)s", level=logging.DEBUG)
 
 
 def main() -> int:
@@ -15,16 +15,15 @@ def main() -> int:
 
     # Producer: videotestsrc -> appsink
     producer_desc = (
-        "videotestsrc pattern=smpte "
-        "! appsink name=mysink emit-signals=true"
+        "videotestsrc pattern=smpte num-buffers=250 "
+        "! video/x-raw,format=I420,framerate=50/1 ! appsink name=mysink emit-signals=true"
     )
 
     # Consumer: appsrc -> autovideosink
     # Caps are applied dynamically from the first sample arriving on appsink
     consumer_desc = (
         "appsrc name=mysrc is-live=true format=time do-timestamp=true "
-        "! autovideosink"
-    )
+        "! autovideosink")
 
     producer = Gst.parse_launch(producer_desc)
     consumer = Gst.parse_launch(consumer_desc)
@@ -36,11 +35,13 @@ def main() -> int:
         return 1
 
     def on_new_sample(sink):
-        sample = sink.emit("pull-sample")
+        sample: Gst.Sample = sink.emit("pull-sample")
         if sample is None:
             return Gst.FlowReturn.ERROR
-        
-        # Forward the buffer to appsrc
+        buffer = sample.get_buffer()
+        logging.debug(f"New sample buffer: Offset={buffer.offset}, "
+                      f"PTS={buffer.pts/Gst.SECOND:.2f}, "
+                      f"Duration={buffer.duration/Gst.SECOND:.2f}")
         return appsrc.emit("push-sample", sample)
 
     appsink.connect("new-sample", on_new_sample)
@@ -84,4 +85,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
